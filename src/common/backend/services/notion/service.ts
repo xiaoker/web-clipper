@@ -76,6 +76,12 @@ export default class NotionDocumentService implements DocumentService {
       this.userContent = await this.getUserContent();
     }
 
+    // Check if userContent or recordMap or space is null or undefined
+    if (!this.userContent || !this.userContent.recordMap || !this.userContent.recordMap.space) {
+      this.repositories = [];
+      return this.repositories;
+    }
+
     const spaces = this.userContent.recordMap.space;
 
     const userId = Object.keys(this.userContent.recordMap.notion_user)[0] as string;
@@ -83,6 +89,11 @@ export default class NotionDocumentService implements DocumentService {
     const result: Array<NotionRepository[]> = await Promise.all(
       Object.keys(spaces).map(async (p) => {
         const space = spaces[p];
+        // It's also good practice to check if space or space.value is null before accessing space.value.id and space.value.name
+        if (!space || !space.value) {
+          // Handle this case, maybe return an empty array or skip this iteration
+          return []; // Or continue, or throw an error, depending on desired behavior
+        }
         const recentPages = await this.getRecentPageVisits(space.value.id, userId);
         return this.loadSpace(p, space.value.name, recentPages);
       })
