@@ -13,7 +13,7 @@ export interface NotionUserContent {
         };
       };
     };
-    space: {
+    space?: {
       [id: string]: {
         role: string;
         value: {

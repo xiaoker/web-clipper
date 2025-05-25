@@ -76,6 +76,12 @@ export default class NotionDocumentService implements DocumentService {
       this.userContent = await this.getUserContent();
     }
 
+    if (!this.userContent.recordMap || !this.userContent.recordMap.space) {
+      console.warn("Notion space information is missing from API response. Cannot retrieve repositories.");
+      this.repositories = [];
+      return this.repositories;
+    }
+
     const spaces = this.userContent.recordMap.space;
 
     const userId = Object.keys(this.userContent.recordMap.notion_user)[0] as string;
@@ -83,6 +89,10 @@ export default class NotionDocumentService implements DocumentService {
     const result: Array<NotionRepository[]> = await Promise.all(
       Object.keys(spaces).map(async (p) => {
         const space = spaces[p];
+        if (!space || !space.value) {
+            console.warn(`Space data for ID ${p} is incomplete.`);
+            return [];
+        }
         const recentPages = await this.getRecentPageVisits(space.value.id, userId);
         return this.loadSpace(p, space.value.name, recentPages);
       })
@@ -114,7 +124,16 @@ export default class NotionDocumentService implements DocumentService {
     if (!this.userContent) {
       this.userContent = await this.getUserContent();
     }
-    const spaceId = Object.values(this.userContent.recordMap.space)[0].value.id;
+
+    if (!this.userContent.recordMap || !this.userContent.recordMap.space) {
+      throw new Error("Notion space information is missing from API response. Cannot create document.");
+    }
+    const spaceValues = Object.values(this.userContent.recordMap.space);
+    if (spaceValues.length === 0 || !spaceValues[0] || !spaceValues[0].value) {
+      throw new Error("Notion space data is incomplete. Cannot create document.");
+    }
+    const spaceId = spaceValues[0].value.id;
+
     await this.requestWithCookie.post('api/v3/enqueueTask', {
       task: {
         eventName: 'importFile',
@@ -140,7 +159,16 @@ export default class NotionDocumentService implements DocumentService {
     if (!this.userContent) {
       this.userContent = await this.getUserContent();
     }
-    const spaceId = Object.values(this.userContent.recordMap.space)[0].value.id;
+
+    if (!this.userContent.recordMap || !this.userContent.recordMap.space) {
+      throw new Error("Notion space information is missing from API response. Cannot create empty file.");
+    }
+    const spaceValues = Object.values(this.userContent.recordMap.space);
+    if (spaceValues.length === 0 || !spaceValues[0] || !spaceValues[0].value) {
+      throw new Error("Notion space data is incomplete. Cannot create empty file.");
+    }
+    const spaceId = spaceValues[0].value.id;
+
     const documentId = generateUuid();
     const parentId = repository.id;
     const userId = Object.values(this.userContent.recordMap.notion_user)[0].value.id;
